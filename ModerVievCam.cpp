@@ -55,16 +55,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <iostream>
 
+
 #include <GL/glut.h>
+#include <GL/freeglut.h>
+#include <GL/GLU.h>
 
   /* function declarations */
-
 void
 drawScene(void), setMatrix(void), initLightAndMaterial(void),
 animation(void), resize(int w, int h), menu(int choice), keyboard(unsigned char c, int x, int y);
+
 
 /* global variables */
 
@@ -74,23 +78,21 @@ static float lmodel_twoside[] =
 { GL_TRUE };
 static float lmodel_oneside[] =
 { GL_FALSE };
-
+double width=800, height=600;
 int
 main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
-
 	quadObj = gluNewQuadric();  /* this will be used in drawScene
 								 */
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutCreateWindow("Two-sided lighting");
-
-	ax = 10.0;
-	ay = -10.0;
+	glutReshapeWindow(width, height);
+	ax = 0.0;
+	ay = 0.0;
 	az = 0.0;
 
 	initLightAndMaterial();
-
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(resize);
 	glutCreateMenu(menu);
@@ -114,10 +116,11 @@ void tree()
 	double rad_mn_sphere;
 	double radius_spheres;
 	double size_tree;
-
+	glPushMatrix();
 	size_tree = rand()%11+8.0;
 	double ret = (double)rand() / ((double)rand()+ 0.1);
 	rad_mn_sphere =size_tree/8.0 + 2 + ret - floor(ret);
+	glRotatef(90, -1, 0, 0);
 	gluCylinder(quadObj, ret-floor(ret)+1, 1, size_tree, 20,8);
 	glTranslated(0,0,size_tree);
 	gluSphere(quadObj, rad_mn_sphere, 20, 8);
@@ -133,17 +136,19 @@ void tree()
 			glPopMatrix();
 			glPushMatrix();
 			rand_sphr_for_tree(x, y, -z, radius_spheres);
-			std::cout << x << " " << y << " " << z;
 			glPopMatrix();
 		}
 	}
+	glPopMatrix();
 }
 void christmas_tree()
 {
+	glPushMatrix();
 	int height = 17;
 	int width = 0;
+	glRotatef(90, -1, 0, 0);
 	gluCylinder(quadObj, 1.3, 0, height, 13, 5);
-	while (height-5>0)
+	while (height-4>0)
 	{
 		width += 1;
 		int step = rand() % 4 + 2;
@@ -153,27 +158,59 @@ void christmas_tree()
 		gluCylinder(quadObj, width, 0, step, 10, 4);
 		glPopMatrix();
 	}
+	glPopMatrix();
+
 }
 
+double DegToRad(double D)
+{
+	return D / 180 * M_PI;
+}
+void line_mebius()
+{
+	glColor3b(1, 0, 0);
+	glBegin(GL_POLYGON);
+	for (double u = 0; u < 360; u += 10)
+	{
+		for (double v = -1; v < 1; v += 0.03)
+		{
+			glVertex3d(cos(u) * (1 + v / 2 * cos(u / 2)), sin(u)*(1+v/2*cos(u/2)), v/2*sin(u/2));
+		}
+	}
+	glEnd();
+}
+
+GLfloat VertexArrayPresent[23][36]=
+{
+	0, 0, 0,
+	0, 0, 1,
+	0, 1, 0,
+	0, 1, 1,
+	1, 0, 0, 
+	1, 0, 1,
+	1, 1, 0,
+	1, 1, 1,
+};
+GLubyte IndexArray[12][2]=
+{
+	0, 1,
+	1, 2,
+	3, 4, 
+	5, 6,
+	7, 8
+};
 
 
-//void present()
-//{
-//#!BPY
-//	import bpy, struct
-//		from Blender import*
-//
-//		self.fh = open("MyFileName", "w")
-//		m = bpy.data.meshes["MyMeshName"]
-//		faces = m.faces
-//		for face in faces :
-//	for (vertex, uv) in zip(face.verts, face.uv) :
-//		self.fh.write(struct.pack('<fff', *vertex.co)) # coords
-//		self.fh.write(struct.pack('<fff', *vertex.no)) # normals
-//		self.fh.write(struct.pack('<ff', uv.x, uv.y)) # uvs
-//
-//		self.fh.close()
-//}
+
+void present(double size)
+{
+	glutSolidCube(size);
+	glTranslated(0, size/2, 0);
+	glRotated(90, 1, 0, 0);
+	glScaled(size/3, size/3, size/3);
+	line_mebius();
+}
+
 void
 drawScene(void)
 {
@@ -186,6 +223,8 @@ drawScene(void)
 	glRotatef(ax, 1.0, 0.0, 0.0);
 	glRotatef(-ay, 0.0, 1.0, 0.0);
 	christmas_tree();
+	glTranslated(40, 3, -10);
+	present(4);
 	glPopMatrix();
 
 	glutSwapBuffers();
@@ -196,9 +235,11 @@ setMatrix(void)
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(-15.0, 15.0, -15.0, 15.0, -10.0, 10.0);
+	//glOrtho(-89.0, 89.0, -65.0, 65.0, -80.0, 80.0);
+	double aspect = (double)(width) / (double)(height);
+	gluPerspective(90.0, 1, 1.0, 1000.0);
 	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	glTranslated(0, 0, -30);
 }
 
 int count = 0;
@@ -206,6 +247,7 @@ int count = 0;
 void
 animation(void)
 {
+	glPushMatrix();
 	ax += 5.0;
 	ay -= 2.0;
 	az += 5.0;
@@ -215,6 +257,7 @@ animation(void)
 		ay = 0.0;
 	if (az >= 360)
 		az = 0.0;
+	glPopMatrix();
 	drawScene();
 	count++;
 	if (count >= 60)
